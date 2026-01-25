@@ -277,6 +277,9 @@ func readGsettings() {
 			gsettings.colorScheme)
 	}
 
+	// Auto-detect color-scheme from theme name if set to default
+	inferColorSchemeFromThemeName()
+
 	val, err = getGsettingsValue("org.gnome.desktop.sound", "event-sounds")
 	if err == nil {
 		if val == "true" {
@@ -301,6 +304,20 @@ func readGsettings() {
 	} else {
 		log.Warnf("Couldn't read input-feedback-sounds, leaving default %v",
 			gsettings.inputFeedbackSounds)
+	}
+}
+
+// inferColorSchemeFromThemeName sets gsettings.colorScheme to prefer-dark or prefer-light
+// based on whether the gtk theme name contains "dark".
+func inferColorSchemeFromThemeName() {
+	themeLower := strings.ToLower(gsettings.gtkTheme)
+	log.Infof("Auto detect color-scheme (inference pass), theme name is: %s", themeLower)
+	if strings.Contains(themeLower, "dark") {
+		gsettings.colorScheme = "prefer-dark"
+		log.Infof("Inferred color-scheme -> prefer-dark")
+	} else {
+		gsettings.colorScheme = "prefer-light"
+		log.Infof("Inferred color-scheme -> prefer-light")
 	}
 }
 
@@ -362,6 +379,9 @@ func applyGsettings() {
 	gnomeSchema := "org.gnome.desktop.interface"
 	log.Info(">>> Applying gsettings")
 	log.Infof(">> %s", gnomeSchema)
+
+	// Ensure color-scheme is inferred from gtk theme when set to default
+	inferColorSchemeFromThemeName()
 
 	cmd := exec.Command("gsettings", "set", gnomeSchema, "gtk-theme", gsettings.gtkTheme)
 	err := cmd.Run()
@@ -561,6 +581,9 @@ func saveGtkIni3() {
 	}
 	log.Infof(">>> Exporting %s", configFile)
 
+	// Ensure color-scheme is inferred from gtk theme when set to default
+	inferColorSchemeFromThemeName()
+
 	lines := []string{"[Settings]"}
 
 	lines = append(lines, fmt.Sprintf("gtk-theme-name=%s", gsettings.gtkTheme))
@@ -656,6 +679,9 @@ func saveGtkIni4() {
 		makeDir(filepath.Join(configHome(), "gtk-4.0/"))
 	}
 	log.Infof(">>> Exporting %s", configFile)
+
+	// Ensure color-scheme is inferred from gtk theme when set to default
+	inferColorSchemeFromThemeName()
 
 	lines := []string{"[Settings]"}
 
