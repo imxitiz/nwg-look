@@ -207,7 +207,7 @@ func readGsettings() {
 			log.Infof("cursor-size: %v", gsettings.cursorSize)
 		}
 	} else {
-		log.Warnf("Couldn't read cursorSize, leaving default %s",
+		log.Warnf("Couldn't read cursorSize, leaving default %d",
 			gsettings.cursorSize)
 	}
 
@@ -264,7 +264,7 @@ func readGsettings() {
 			log.Infof("text-scaling-factor: %v", gsettings.textScalingFactor)
 		}
 	} else {
-		log.Warnf("Couldn't read textScalingFactor, leaving default %s",
+		log.Warnf("Couldn't read textScalingFactor, leaving default %f",
 			gsettings.textScalingFactor)
 	}
 
@@ -346,7 +346,7 @@ func saveGsettingsBackup() {
 			line := fmt.Sprintf("%s=%s", key, val)
 			lines = append(lines, line)
 		} else {
-			log.Warnf("Couldn't get gsettings key: $s", key)
+			log.Warnf("Couldn't get gsettings key: %s", key)
 		}
 	}
 	for _, key := range []string{"event-sounds", "input-feedback-sounds"} {
@@ -355,7 +355,7 @@ func saveGsettingsBackup() {
 			line := fmt.Sprintf("%s=%s", key, val)
 			lines = append(lines, line)
 		} else {
-			log.Warnf("Couldn't get gsettings key: $s", key)
+			log.Warnf("Couldn't get gsettings key: %s", key)
 		}
 	}
 
@@ -453,7 +453,7 @@ func applyGsettings() {
 	cmd = exec.Command("gsettings", "set", gnomeSchema, "text-scaling-factor", fmt.Sprintf("%f", gsettings.textScalingFactor))
 	err = cmd.Run()
 	if err != nil {
-		log.Warnf("text-scaling-factor: %s %s", gsettings.textScalingFactor, err)
+		log.Warnf("text-scaling-factor: %f %s", gsettings.textScalingFactor, err)
 	} else {
 		log.Infof("text-scaling-factor: %v OK", gsettings.textScalingFactor)
 	}
@@ -989,6 +989,39 @@ func clearGtk4Symlinks() {
 		}
 	}
 }
+func overrideFlatpakGTKTheme() {
+	theme := gsettings.gtkTheme
+	log.Infof("Overriding flatpak GTK theme to %s...", theme)
+	cmd := exec.Command("flatpak", "override", "--user", "--env", fmt.Sprintf("GTK_THEME=%s", theme))
+	if _, err := cmd.CombinedOutput(); err != nil {
+		log.Warnf("failed to override flatpak gtk theme to %s: %s", theme, err)
+	}
+}
+
+func unsetFlatpakGTKTheme() {
+	log.Info("Removing Flatpak GTK Theme override...")
+	cmd := exec.Command("flatpak", "override", "--user", "--unset-env", "GTK_THEME")
+	if _, err := cmd.CombinedOutput(); err != nil {
+		log.Warnf("failed to unset flatpak gtk theme override: %s", err)
+	}
+}
+
+func overrideFlatpakIconTheme() {
+	theme := gsettings.iconTheme
+	log.Infof("Overriding flatpak Icon theme to %s...", theme)
+	cmd := exec.Command("flatpak", "override", "--user", "--env", fmt.Sprintf("ICON_THEME=%s", theme))
+	if _, err := cmd.CombinedOutput(); err != nil {
+		log.Warnf("failed to override flatpak icon theme to %s: %s", theme, err)
+	}
+}
+
+func unsetFlatpakIconTheme() {
+	log.Info("Removing Flatpak Icon Theme override...")
+	cmd := exec.Command("flatpak", "override", "--user", "--unset-env", "ICON_THEME")
+	if _, err := cmd.CombinedOutput(); err != nil {
+		log.Warnf("failed to unset flatpak icon theme override: %s", err)
+	}
+}
 
 func saveIndexTheme() {
 	home := os.Getenv("HOME")
@@ -1445,6 +1478,13 @@ func detectLang() string {
 		}
 	}
 	return lang
+}
+
+func flatpakAvailable() bool {
+	if _, err := exec.LookPath("flatpak"); err != nil {
+		return false
+	}
+	return true
 }
 
 func loadVocabulary(lang string) map[string]string {
